@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -37,21 +35,14 @@ func postHandler(c echo.Context) error {
 
 	tasks = append(tasks, newTask)
 
-	response := fmt.Sprintf("Task updated: %s", newTask.ID)
-
-	return c.JSON(http.StatusOK, map[string]string{"message": response})
+	return c.JSON(http.StatusCreated, newTask)
 }
 
 func getHandler(c echo.Context) error {
-    id := c.Param("id")
-
-	for _, task := range tasks {
-		if task.ID == id {
-			return c.JSON(http.StatusOK, task)
-		}
-	}
-	
-	return c.JSON(http.StatusNotFound, map[string]string{"error": "Task not found"})
+    if len(tasks) == 0 {
+        return c.JSON(http.StatusOK, []Task{})
+    }
+    return c.JSON(http.StatusOK, tasks)
 }
 
 func pathHandler(c echo.Context) error {
@@ -81,7 +72,7 @@ func deleteHandler(c echo.Context) error {
 	for i, task := range tasks {
 		if task.ID == id {
 			tasks = append(tasks[:i], tasks[i+1:]...)
-			return c.JSON(http.StatusOK, map[string]string{"message": "Task deleted"})
+			return c.NoContent(http.StatusNoContent)
 		}
 	}
 
@@ -95,7 +86,7 @@ func main() {
 	e.Use(middleware.CORS())
 
 	e.POST("/tasks", postHandler)
-	e.GET("/tasks/:id", getHandler)
+	e.GET("/tasks", getHandler)
 	e.PATCH("/tasks/:id", pathHandler)
 	e.DELETE("/tasks/:id", deleteHandler)
 
