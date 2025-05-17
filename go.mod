@@ -1,4 +1,4 @@
-module github.com/Arachimaru716/task-api
+module task-api
 
 go 1.23.4
 
