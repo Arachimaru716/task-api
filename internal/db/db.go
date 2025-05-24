@@ -3,8 +3,7 @@ package db
 import (
     "log"
     "gorm.io/driver/postgres"
-    "gorm.io/gorm"
-    "task-api/internal/service" 
+    "gorm.io/gorm" 
 )
 
 var db *gorm.DB
@@ -17,11 +16,6 @@ func InitDB() (*gorm.DB, error) {
     db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
     if err != nil {
         log.Fatalf("Could not connect to database: %v", err)
-    }
-
-    // Выполняем миграции для структуры Task
-    if err := db.AutoMigrate(&service.Task{}); err != nil {
-        log.Fatalf("Could not migrate: %v", err)
     }
 
     return db, nil
