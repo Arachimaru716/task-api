@@ -1,71 +1,82 @@
 package handlers
 
 import (
-    "net/http"
-
-    "github.com/labstack/echo/v4"
-    "task-api/internal/service"
+	"context"
+	"task-api/internal/tasksService"
+	"task-api/internal/web/tasks"
+	"gorm.io/gorm"
 )
 
-// TaskHandler представляет обработчики для работы с задачами
-type TaskHandler struct {
-    service service.TaskService
+type Handler struct {
+	Service *tasksService.Service
 }
 
-// Конструктор TaskHandler
-func NewTaskHandler(s service.TaskService) *TaskHandler {
-    return &TaskHandler{service: s}
+func NewHandler(service *tasksService.Service) *Handler {
+	return &Handler{Service: service}
 }
 
-// Методы обработчиков
+func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	allTasks, err := h.Service.GetAllTasks()
+	if err != nil {
+		return nil, err
+	}
 
-// GetTasks возвращает список всех задач
-func (h *TaskHandler) GetTasks(c echo.Context) error {
-    tasks, err := h.service.GetAllTasks()
-    if err != nil {
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Could not get tasks"})
+	response := tasks.GetTasks200JSONResponse{}
+for _, t := range allTasks {
+    id := uint64(t.ID)
+    task := tasks.Task{
+        Id:     &id,
+        Task:   &t.Text,
+        IsDone: &t.IsDone,
     }
-    return c.JSON(http.StatusOK, tasks)
+    response = append(response, task)
+}
+return response, nil
 }
 
-// PostTask создаёт новую задачу
-func (h *TaskHandler) PostTask(c echo.Context) error {
-    var req service.TaskRequest
-    if err := c.Bind(&req); err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-    }
-
-    task, err := h.service.CreateTask(req.Task)
-    if err != nil {
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Could not create task"})
-    }
-
-    return c.JSON(http.StatusCreated, task)
+func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
+	taskToCreate := tasksService.Task{
+		Text:   *request.Body.Task,
+		IsDone: *request.Body.IsDone,
+	}
+	createdTask, err := h.Service.CreateTask(taskToCreate)
+if err != nil {
+    return nil, err
 }
 
-// PatchTask обновляет задачу
-func (h *TaskHandler) PatchTask(c echo.Context) error {
-    id := c.Param("id")
-
-    var req service.TaskRequest
-    if err := c.Bind(&req); err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-    }
-
-    updatedTask, err := h.service.UpdateTask(id, req.Task, req.IsDone)
-    if err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Could not update task"})
-    }
-
-    return c.JSON(http.StatusOK, updatedTask)
+id := uint64(createdTask.ID)
+return tasks.PostTasks201JSONResponse{
+    Id:     &id,
+    Task:   &createdTask.Text,
+    IsDone: &createdTask.IsDone,
+}, nil
 }
 
-// DeleteTask удаляет задачу
-func (h *TaskHandler) DeleteTask(c echo.Context) error {
-    id := c.Param("id")
+func (h *Handler) PatchTasks(ctx context.Context, request tasks.PatchTasksRequestObject) (tasks.PatchTasksResponseObject, error) {
+	taskToUpdate := tasksService.Task{
+		Model:  gorm.Model{ID: uint(*request.Body.Id)},
+		Text:   *request.Body.Task,
+		IsDone: *request.Body.IsDone,
+	}
+	updatedTask, err := h.Service.UpdateTask(taskToUpdate)
+	if err != nil {
+		return nil, err
+	}
 
-    if err := h.service.DeleteTask(id); err != nil {
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Could not delete task"})
-    }
-    return c.NoContent(http.StatusNoContent)
+	id := uint64(updatedTask.ID)
+
+response := tasks.PatchTasks200JSONResponse{
+    Id:     &id,
+    Task:   &updatedTask.Text,
+    IsDone: &updatedTask.IsDone,
+}
+return response, nil
+}
+
+func (h *Handler) DeleteTasks(ctx context.Context, request tasks.DeleteTasksRequestObject) (tasks.DeleteTasksResponseObject, error) {
+	err := h.Service.DeleteTask(uint(*request.Body.Id))
+	if err != nil {
+		return nil, err
+	}
+	return tasks.DeleteTasks204Response{}, nil
 }

@@ -3,3 +3,6 @@
 
 # Ignore all .DS_Store files in subdirectories
 **/.DS_Store
+
+# Игнорировать настройки редактора VSCode
+.vscode/
