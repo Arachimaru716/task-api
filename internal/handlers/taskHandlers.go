@@ -52,31 +52,30 @@ return tasks.PostTasks201JSONResponse{
 }, nil
 }
 
-func (h *Handler) PatchTasks(ctx context.Context, request tasks.PatchTasksRequestObject) (tasks.PatchTasksResponseObject, error) {
-	taskToUpdate := tasksService.Task{
-		Model:  gorm.Model{ID: uint(*request.Body.Id)},
-		Text:   *request.Body.Task,
-		IsDone: *request.Body.IsDone,
-	}
-	updatedTask, err := h.Service.UpdateTask(taskToUpdate)
-	if err != nil {
-		return nil, err
-	}
+func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
+    taskToUpdate := tasksService.Task{
+        Model:  gorm.Model{ID: uint(request.Id)}, 
+        Text:   request.Body.Task,    // Убрали * - это уже string
+        IsDone: request.Body.IsDone,  // Убрали * - это уже bool
+    }
 
-	id := uint64(updatedTask.ID)
+    updatedTask, err := h.Service.UpdateTask(taskToUpdate)
+    if err != nil {
+        return nil, err
+    }
 
-response := tasks.PatchTasks200JSONResponse{
-    Id:     &id,
-    Task:   &updatedTask.Text,
-    IsDone: &updatedTask.IsDone,
+    id := uint64(updatedTask.ID)
+    return tasks.PatchTasksId200JSONResponse{
+        Id:     &id,
+        Task:   &updatedTask.Text,    // Здесь & нужно, так как ответ требует *string
+        IsDone: &updatedTask.IsDone,  // И здесь & для *bool
+    }, nil
 }
-return response, nil
-}
 
-func (h *Handler) DeleteTasks(ctx context.Context, request tasks.DeleteTasksRequestObject) (tasks.DeleteTasksResponseObject, error) {
-	err := h.Service.DeleteTask(uint(*request.Body.Id))
-	if err != nil {
-		return nil, err
-	}
-	return tasks.DeleteTasks204Response{}, nil
+func (h *Handler) DeleteTasksId(ctx context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+    err := h.Service.DeleteTask(uint(request.Id))
+    if err != nil {
+        return nil, err
+    }
+    return tasks.DeleteTasksId204Response{}, nil
 }

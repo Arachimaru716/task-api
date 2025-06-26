@@ -9,7 +9,7 @@ paths:
       tags: [tasks]
       responses:
         '200':
-          description: Tasks list
+          description: A list of tasks
           content:
             application/json:
               schema:
@@ -17,7 +17,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Task'
     post:
-      summary: Create task
+      summary: Create a new task
       tags: [tasks]
       requestBody:
         required: true
@@ -27,36 +27,52 @@ paths:
               $ref: '#/components/schemas/Task'
       responses:
         '201':
-          description: Created task
+          description: Task created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Task'
+
+  /tasks/{id}:
     patch:
-      summary: Update task
+      summary: Update a task by ID
       tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: uint64
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Task'
+              type: object
+              properties:
+                task:
+                  type: string
+                is_done:
+                  type: boolean
+              required: [task, is_done]
       responses:
         '200':
-          description: Updated task
+          description: Task updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Task'
     delete:
-      summary: Delete task
+      summary: Delete a task by ID
       tags: [tasks]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Task'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: uint64
       responses:
         '204':
           description: Task deleted
