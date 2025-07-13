@@ -7,29 +7,38 @@ import (
 	"task-api/internal/database"
 	"task-api/internal/handlers"
 	"task-api/internal/tasksService"
+	"task-api/internal/userService"
 	"task-api/internal/web/tasks"
+	"task-api/internal/web/users"
 )
 
 func main() {
 	database.InitDB()
-	
-	if err := database.DB.AutoMigrate(&tasksService.Task{}); err != nil {
+
+	if err := database.DB.AutoMigrate(&tasksService.Task{}, &userService.User{}); err != nil {
 		log.Fatalf("Ошибка при создании таблицы: %v", err)
 	}
 
-	repo := tasksService.NewTaskRepository(database.DB)
-	service := tasksService.NewService(repo)
-	handler := handlers.NewHandler(service)
+	taskRepo := tasksService.NewTaskRepository(database.DB)
+	taskSvc := tasksService.NewService(taskRepo)
+	taskH := handlers.NewHandler(taskSvc)
+
+	userRepo := userService.NewUserRepository(database.DB)
+	userSvc := userService.NewService(userRepo)
+	userH := handlers.NewUserHandlers(userSvc)
 
 	e := echo.New()
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	strictHandler := tasks.NewStrictHandler(handler, nil)
-	tasks.RegisterHandlers(e, strictHandler)
+	strictTasksH := tasks.NewStrictHandler(taskH, nil)
+	tasks.RegisterHandlers(e, strictTasksH)
 
+	users.RegisterHandlers(e, userH)
+
+	log.Println("Server started on :8080")
 	if err := e.Start(":8080"); err != nil {
-		log.Fatalf("failed to start with err: %v", err)
+		log.Fatalf("failed to start server: %v", err)
 	}
 }

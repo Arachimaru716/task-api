@@ -7,12 +7,12 @@ migrate-new:
 	migrate create -ext sql -dir ./migrations ${NAME}
 
 # Применение миграций
-migrate:
+migrate-up:
 	$(MIGRATE) up
 
 # Откат миграций
 migrate-down:
-	$(MIGRATE) down
+	$(MIGRATE) down 1
 
 # Запуск приложения
 run:
@@ -20,6 +20,8 @@ run:
 
 gen:
 	oapi-codegen -config openapi/.openapi -include-tags tasks -package tasks openapi/openapi.yaml > ./internal/web/tasks/api.gen.go
+	oapi-codegen -config openapi/.openapi -include-tags users -package users openapi/openapi.yaml > ./internal/web/users/api.gen.go
+
 
 lint:
 	golangci-lint run --color=always
