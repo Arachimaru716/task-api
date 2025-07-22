@@ -2,6 +2,7 @@ package userService
 
 import (
 	"errors"
+	"task-api/internal/tasksService"
 )
 
 type Service struct {
@@ -49,4 +50,8 @@ func (s *Service) DeleteUser(id uint) error {
 		return errors.New("invalid id")
 	}
 	return s.repo.Delete(id)
+}
+
+func (s *Service) GetTasksForUser(userID uint) ([]tasksService.Task, error) {
+    return s.repo.GetTasksByUser(userID)
 }

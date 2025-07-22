@@ -1,19 +1,23 @@
 package handlers
 
 import (
+	"container/list"
 	"context"
-	"gorm.io/gorm"
 	"task-api/internal/tasksService"
+	"task-api/internal/userService"
 	"task-api/internal/web/tasks"
+
+	"gorm.io/gorm"
 )
 
 type Handler struct {
 	Service *tasksService.Service
+	userService *userService.Service
 }
 
-func NewHandler(service *tasksService.Service) *Handler {
-	return &Handler{Service: service}
-}
+func NewHandler(taskSvc *tasksService.Service, userSvc *userService.Service) *Handler {
+	return &Handler{TaskService: taskSvc, UserService: userSvc,}
+} 
 
 func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
 	allTasks, err := h.Service.GetAllTasks()
@@ -34,29 +38,53 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 	return response, nil
 }
 
-func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
-	taskToCreate := tasksService.Task{
-		Text:   *request.Body.Task,
-		IsDone: *request.Body.IsDone,
+func (h *Handler) GetUsersIdTasks(ctx context.Context, request tasks.GetUsersIdTasksRequestObject,) (tasks.GetUsersIdTasksRequestObject, error) {
+	userID := uint(request.Id)
+
+	list, err := h.userService.GetTasksForUser(userID)
+	if err != nil {
+		return nil, err
 	}
-	createdTask, err := h.Service.CreateTask(taskToCreate)
+
+	resp := tasks.GetUsersIdTasks200JSONResponse{}
+	for _, t := range list {
+		id := uint64(t.ID)
+		resp = append(resp, tasks.Task{
+			Id: &id,
+			Task: &t.Text,
+			IsDone: &t.IsDone,
+			UserId: &id,
+		})
+	}
+	return resp, nil
+}
+
+func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTaskRequestObject) (tasks.PostTaskResponseObject, error) {
+	body := request.Body
+
+	text := body.Task
+	isDone := body.IsDone
+	userID := uint(body.UserId)
+
+	createdTask, err := h.Service.CreateTask(text, isDone, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	id := uint64(createdTask.ID)
-	return tasks.PostTasks201JSONResponse{
+	return tasks.PostTask201JSONResponse{
 		Id:     &id,
 		Task:   &createdTask.Text,
 		IsDone: &createdTask.IsDone,
+		UserId: &id,
 	}, nil
 }
 
 func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
 	taskToUpdate := tasksService.Task{
 		Model:  gorm.Model{ID: uint(request.Id)},
-		Text:   request.Body.Task,   // Убрали * - это уже string
-		IsDone: request.Body.IsDone, // Убрали * - это уже bool
+		Text:   request.Body.Task,
+		IsDone: request.Body.IsDone,
 	}
 
 	updatedTask, err := h.Service.UpdateTask(taskToUpdate)
@@ -67,8 +95,8 @@ func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRe
 	id := uint64(updatedTask.ID)
 	return tasks.PatchTasksId200JSONResponse{
 		Id:     &id,
-		Task:   &updatedTask.Text,   // Здесь & нужно, так как ответ требует *string
-		IsDone: &updatedTask.IsDone, // И здесь & для *bool
+		Task:   &updatedTask.Text,
+		IsDone: &updatedTask.IsDone,
 	}, nil
 }
 
