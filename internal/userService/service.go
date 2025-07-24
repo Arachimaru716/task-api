@@ -46,12 +46,9 @@ func (s *Service) UpdateUser(id uint, email, password string) (User, error) {
 }
 
 func (s *Service) DeleteUser(id uint) error {
-	if id == 0 {
-		return errors.New("invalid id")
-	}
-	return s.repo.Delete(id)
+	return s.repo.DeleteHard(id)
 }
 
 func (s *Service) GetTasksForUser(userID uint) ([]tasksService.Task, error) {
-    return s.repo.GetTasksByUser(userID)
+	return s.repo.GetTasksByUser(userID)
 }

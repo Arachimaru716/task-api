@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"container/list"
 	"context"
 	"task-api/internal/tasksService"
 	"task-api/internal/userService"
@@ -11,13 +10,13 @@ import (
 )
 
 type Handler struct {
-	Service *tasksService.Service
+	Service     *tasksService.Service
 	userService *userService.Service
 }
 
 func NewHandler(taskSvc *tasksService.Service, userSvc *userService.Service) *Handler {
-	return &Handler{TaskService: taskSvc, UserService: userSvc,}
-} 
+	return &Handler{Service: taskSvc, userService: userSvc}
+}
 
 func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
 	allTasks, err := h.Service.GetAllTasks()
@@ -38,7 +37,7 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 	return response, nil
 }
 
-func (h *Handler) GetUsersIdTasks(ctx context.Context, request tasks.GetUsersIdTasksRequestObject,) (tasks.GetUsersIdTasksRequestObject, error) {
+func (h *Handler) GetTasksByUserID(ctx context.Context, request tasks.GetTasksByUserIDRequestObject) (tasks.GetTasksByUserIDResponseObject, error) {
 	userID := uint(request.Id)
 
 	list, err := h.userService.GetTasksForUser(userID)
@@ -46,37 +45,44 @@ func (h *Handler) GetUsersIdTasks(ctx context.Context, request tasks.GetUsersIdT
 		return nil, err
 	}
 
-	resp := tasks.GetUsersIdTasks200JSONResponse{}
+	resp := make(tasks.GetTasksByUserID200JSONResponse, 0, len(list))
 	for _, t := range list {
-		id := uint64(t.ID)
+		taskID := uint64(t.ID)
+		text := t.Text
+		isDone := t.IsDone
+		var userIDval uint64
+		if t.UserID != nil {
+			userIDval = uint64(*t.UserID)
+		}
+
 		resp = append(resp, tasks.Task{
-			Id: &id,
-			Task: &t.Text,
-			IsDone: &t.IsDone,
-			UserId: &id,
+			Id:     &taskID,
+			Task:   &text,
+			IsDone: &isDone,
+			UserId: &userIDval,
 		})
 	}
 	return resp, nil
 }
 
-func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTaskRequestObject) (tasks.PostTaskResponseObject, error) {
+func (h *Handler) PostTask(ctx context.Context, request tasks.PostTaskRequestObject) (tasks.PostTaskResponseObject, error) {
 	body := request.Body
 
 	text := body.Task
 	isDone := body.IsDone
-	userID := uint(body.UserId)
+	userID := body.UserId
 
-	createdTask, err := h.Service.CreateTask(text, isDone, userID)
+	createdTask, err := h.Service.CreateTask(text, isDone, uint(userID))
 	if err != nil {
 		return nil, err
 	}
 
-	id := uint64(createdTask.ID)
+	taskID := uint64(createdTask.ID)
 	return tasks.PostTask201JSONResponse{
-		Id:     &id,
+		Id:     &taskID,
 		Task:   &createdTask.Text,
 		IsDone: &createdTask.IsDone,
-		UserId: &id,
+		UserId: &userID,
 	}, nil
 }
 

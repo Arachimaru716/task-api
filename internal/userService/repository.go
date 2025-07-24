@@ -1,9 +1,8 @@
 package userService
 
 import (
-	"time"
-	"task-api/internal/tasksService"
 	"gorm.io/gorm"
+	"task-api/internal/tasksService"
 )
 
 type UserRepository struct {
@@ -28,14 +27,17 @@ func (r *UserRepository) Update(u *User) error {
 	return r.db.Save(u).Error
 }
 
-func (r *UserRepository) Delete(id uint) error {
-	return r.db.Model(&User{}).Where("id = ?", id).Update("deleted_at", time.Now()).Error
+func (r *UserRepository) DeleteHard(id uint) error {
+	return r.db.Unscoped().
+        Where("id = ?", id).
+        Delete(&User{}).
+        Error
 }
 
 func (r *UserRepository) GetTasksByUser(userID uint) ([]tasksService.Task, error) {
-    var list []tasksService.Task
-    if err := r.db.Where("user_id = ?", userID).Find(&list).Error; err != nil {
-        return nil, err
-    }
-    return list, nil
+	var list []tasksService.Task
+	if err := r.db.Where("user_id = ?", userID).Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
 }
